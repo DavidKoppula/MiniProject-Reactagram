@@ -1,82 +1,165 @@
-import React from 'react'
-import { StyleSheet, View, Text, Image, FlatList, Dimensions } from 'react-native'
+import React, {useState, useEffect } from 'react'
+import { StyleSheet, View, Text, Image, FlatList, Button, Dimensions} from 'react-native'
+import firebase from 'firebase'
+require('firebase/firestore')
 import { connect } from 'react-redux'
-
 const {width, height} = Dimensions.get('window');
 
-function Profile(props){
-	const { currentUser, posts } = props;
-	console.log({ currentUser, posts})
-	return(
-	<View style={styles.container}>
-		<View style={styles.containerInfo}>
-			<Text> {currentUser.name} </Text>
-			<Text> {currentUser.email} </Text>
-		</View>
 
-		<View style={styles.containerGallery}>
-			<View style = {styles.mainContainerImage}>	
-			<FlatList 
-			horizontal = {false}
-			numColumns = {3}
-			data = {posts}
-			renderItem = {({item}) =>{
-				return(
-				
-				<View
-				style={styles.containerImage}>
-					<Image
-						style={styles.image}
-						source={{ uri: item.downloadURL }}
-					/>
+
+function Profile(props) {
+    const [userPosts, setUserPosts] = useState([]);
+    const [user, setUser] = useState(null);
+    const [following, setFollowing] = useState(false)
+    useEffect(() => {
+        const { currentUser, posts } = props;
+        console.log({ currentUser, posts })
+
+        if(props.route.params.uid === firebase.auth().currentUser.uid){
+            setUser(currentUser)
+            setUserPosts(posts)
+        }
+        else{
+             firebase.firestore()
+            .collection("users")
+            .doc(props.route.params.uid)
+            .get()
+            .then((snapshot) => {
+                if (snapshot.exists) {
+                    setUser(snapshot.data());
+                }
+                else {
+                    console.log('does not exist')
+                }
+            })
+     firebase.firestore()
+            .collection("posts")
+            .doc(props.route.params.uid)
+            .collection("userPosts")
+            .orderBy("creation", "asc")
+            .get()
+            .then((snapshot) => {
+                let posts = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    const id = doc.id;
+                    return { id, ...data }
+		})
+	        setUserPosts(posts)
+                
+            })
+        }
+
+    if(props.following.indexOf(props.route.params.uid) > -1){
+        setFollowing(true);
+    }else{
+        setFollowing(false);
+    }
+
+
+    }, [props.route.params.uid, props.following])
+    
+    const onFollow =() => {
+        firebase.firestore()
+        .collection("following")
+        .doc(firebase.auth().currentUser.uid)
+        .collection("userFollowing")
+        .doc(props.route.params.uid)
+        .set({})
+    }
+    const onUnfollow =() => {
+        firebase.firestore()
+        .collection("following")
+        .doc(firebase.auth().currentUser.uid)
+        .collection("userFollowing")
+        .doc(props.route.params.uid)
+        .delete()
+    }
+    if(user === null){
+        return <View />
+    }
+    return (
+		<View style = {{flex: 1, overflow: 'scroll',justifyContent: 'center',
+		alignItems: 'center'}}>
+		<View style={styles.container}>
+			<View style={styles.containerInfo}>
+				<Text>{user.name}</Text>
+				<Text>{user.email}</Text>
+				{props.route.params.uid !== firebase.auth().currentUser.uid ?
+					(<View>
+						{following ? (
+							<Button
+								title="Following"
+								onPress={() => onUnfollow()}
+							/>
+						) : 
+						(
+							<Button
+								title="Follow"
+								onPress={() => onFollow()}
+							/>
+						)}
+					</View>
+				) : null}
+			</View>
+			<View style={styles.containerGallery}>
+				<View style = {styles.innerContainerGallery}>
+				{
+					userPosts.map((user, index) => {
+						return <View key = {user.id}
+							style={styles.containerImage}>
+							<Image 
+								style={styles.image}
+								source={{ uri: user.downloadURL }}
+							/>
+						</View>
+					})
+				}
 				</View>
 				
-				)
-			}}/>
-			
 			</View>
-				
 		</View>
-	</View>
-	)
+		</View>
+	)	
+				 
 }
+
 const styles=StyleSheet.create({
 	container: {
-		flex: 1,
-		marginTop: 40
+		flex:1,
+		maxWidth: '1000px',
+		height: '100%',
+		justifyContent: 'center',
+		alignItems: 'center'
 	},
 	containerInfo: {
+		flex: 1,
 		margin: 20
 	},
 	containerGallery: {
-		flex: 1,
-		flexDirection: 'column',
-		maxWidth: '800px',
-		position: 'relative',
-		alignItems:'stretch'
+		flex: 3,
+		justifyContent: 'flex-start'
 	},
-	mainContainerImage: {
-		flex: 1,
+	innerContainerGallery:{
 		flexDirection: 'row',
-		position: 'relative'
+		flexWrap: 'wrap',
+		justifyContent: 'center',
+		alignItems: 'center'
 	},
 	containerImage: {
-		flex: 1/3,
-		alignItems: 'stretch',
-		minWidth: width * 0.125,
-		minHeight: height * 0.25,
+		width: '30vw',
+		height: '30vw',
+		maxWidth: '293px',
+		maxHeight:'293px',
 	},
 	image: {
-		flex: 1, 
-		aspectRatio: 1,
-		resizeMode: 'stretch',
-		margin: '10px'
+		flex: 1,
+		resizeMode: 'cover' 
 	}
 
 })
 const mapStateToProps = (store) => ({
     currentUser: store.userState.currentUser,
     posts: store.userState.posts,
-   
+    following: store.userState.following
 })
-export default connect(mapStateToProps, null)(Profile);
+export default connect(mapStateToProps, null)(Profile)

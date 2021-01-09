@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import {TextInput, View, Button} from 'react-native'
 import styles from './styles'
 import Header from '../Header'
-
+import firebase from 'firebase'
 class Login extends Component{
 	constructor(props){
 		super(props)
@@ -29,10 +29,10 @@ class Login extends Component{
 			<View style = {{alignItems: 'center'}}>
 				<Header/>
 				<TextInput placeholder = "email" style = {styles.textOptions}
-							onChangeText = {(name) => this.setState({email})}/>
+							onChangeText = {(email) => this.setState({email})}/>
 				<TextInput placeholder = "password" style = {styles.textOptions}
 							secureTextEntry = {true}
-							onChangeText = {(name) => this.setState({password})}/>						
+							onChangeText = {(password) => this.setState({password})}/>						
 				<View style ={{width:'25%'}}>
 					<Button
 						onPress = {() => this.onSignUp()}
