@@ -39,3 +39,19 @@ export function fetchUserPosts() {
             })
     })
 }
+export function fetchUserFollowing() {
+    return ((dispatch) => {
+        firebase.firestore()
+            .collection("following")
+            .doc(firebase.auth().currentUser.uid)
+            .collection("userFollowing")
+            .onSnapshot((snapshot) => {
+                let following = snapshot.docs.map(doc => {
+
+                    const id = doc.id;
+                    return id
+		})
+                dispatch({ type: USER_FOLLOWING_STATE_CHANGE, following })
+            })
+    })
+}
